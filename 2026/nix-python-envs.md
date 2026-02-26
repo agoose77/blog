@@ -5,9 +5,9 @@ date: 2026-02-25
 
 ## What is Nix/NixOS?
 
-<wiki:NixOS> is a Linux distribution that is built on top of the Nix package manager. Amongst other things, this makes it possible to compose configurations across several machines, and makes continuous, reproducible system upgrades trivial. I host [my NixOS configuration](https://github.com/agoose77/nixos-config) publicly on GitHub.
+<wiki:NixOS> is a Linux distribution that is built on top of the Nix package manager. Amongst other things, this makes it possible to compose configurations across several machines, and makes continuous, reproducible system upgrades trivial. I host [my NixOS configuration](https://github.com/agoose77/nixos-config) publicly on GitHub. See [the configuration](https://github.com/agoose77/nixos-config/blob/f55dcb4b89e174465c718b9308c6248b74da3e14/hosts/nixos/default.nix#L9-L24) for my main `nixos` host.
 
-What makes NixOS shine is the Nix package manager. Nix expressions, writtin the Nix Expression Language, are defined as pure functions that accept dependencies as arguments and produce a result that describes a reproducible build environment. Builds are performed in a sandbox, and the results stored using an addressing system that depends upon the hash of the full dependency tree of the derivation. This creates immutable package stores that enables atomic upgrades and rollbacks, as well as multiple-version installs.
+What makes NixOS shine is the Nix package manager. Nix expressions, written in the Nix Expression Language, are defined as pure functions that accept dependencies as arguments and produce a result that describes a reproducible build environment. Builds are performed in a sandbox, and the results stored using an addressing system that depends upon the hash of the full dependency tree of the derivation. This creates immutable package stores that enables atomic upgrades and rollbacks, as well as multiple-version installs.
 
 ## Distributing Python
 
@@ -32,19 +32,18 @@ From analysing packages distributed in the Anaconda and Canopy distributions, a 
 
 ## Python on NixOS
 
-As mentioned above, `manylinux` makes it possible to run Python wheels on many kinds of Linux distributions. It effectively defines a runtime environment specification. NixOS distributions typically do not implement such a specification. Specifically, NixOS does not implement the <wiki:Filesystem_Hierarchy_Standard> or use dynamic linking. This means that a naive binary will not be able to locate *any* shared libraries. Nix package builds typically set the `rpath` of built libraries so that they can locate their dependencies explicitly.
+As mentioned above, `manylinux` makes it possible to run Python wheels on many kinds of Linux distributions. It effectively defines a runtime environment specification. NixOS distributions typically do not implement such a specification. Specifically, NixOS does not implement the <wiki:Filesystem*Hierarchy_Standard> or use dynamic linking. This means that a naive binary will not be able to locate \_any* shared libraries. Nix package builds typically set the `rpath` of built libraries so that they can locate their dependencies explicitly.
 
 :::{pull-quote}
 NixOS does not implement the <wiki:Filesystem_Hierarchy_Standard> or use dynamic linking.
 :::
 
-This means that a naive Python wheel, such as NumPy, will typically not load on a NixOS system without additional work. 
- 
+This means that a naive Python wheel, such as NumPy, will typically not load on a NixOS system without additional work.
+
 :::{note} To Do
+
 - `LD_LIBRARY_PATH`
 - `patchelf`
 - packages shipping binaries
 - Flakes showing this
-:::
-
-
+  :::
