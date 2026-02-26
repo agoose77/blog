@@ -5,7 +5,7 @@ date: 2026-02-25
 
 ## What is Nix/NixOS?
 
-<wiki:NixOS> is a Linux distribution that is built on top of the Nix package manager. Amongst other things, this makes it trivial to compose configurations across several machines, and makes continuous, reproducible system upgrades trivial. I host [my NixOS configuration](https://github.com/agoose77/nixos-config) publicly on GitHub.
+<wiki:NixOS> is a Linux distribution that is built on top of the Nix package manager. Amongst other things, this makes it possible to compose configurations across several machines, and makes continuous, reproducible system upgrades trivial. I host [my NixOS configuration](https://github.com/agoose77/nixos-config) publicly on GitHub.
 
 What makes NixOS shine is the Nix package manager. Nix expressions, writtin the Nix Expression Language, are defined as pure functions that accept dependencies as arguments and produce a result that describes a reproducible build environment. Builds are performed in a sandbox, and the results stored using an addressing system that depends upon the hash of the full dependency tree of the derivation. This creates immutable package stores that enables atomic upgrades and rollbacks, as well as multiple-version installs.
 
