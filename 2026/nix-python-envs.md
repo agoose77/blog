@@ -36,7 +36,7 @@ From analysing packages distributed in the Anaconda and Canopy distributions, a 
 
 ## Python on NixOS
 
-As mentioned above, `manylinux` makes it possible to run Python wheels on many kinds of Linux distributions. It effectively defines a runtime environment specification. NixOS distributions typically do not implement such a specification. Specifically, NixOS does not implement the <wiki:Filesystem_Hierarchy_Standard> or use dynamic linking. This means that a naive binary will not be able to locate _any_ shared libraries. Nix package builds typically set the `rpath` of built libraries so that they can locate their dependencies explicitly.
+As mentioned above, `manylinux` makes it possible to run Python wheels on many kinds of Linux distributions. It effectively defines a runtime environment specification. NixOS distributions typically do not implement such a specification. Specifically, NixOS does not implement the <wiki:Filesystem*Hierarchy_Standard> or use dynamic linking. This means that a naive binary will not be able to locate \_any* shared libraries. Nix package builds typically set the `rpath` of built libraries so that they can locate their dependencies explicitly.
 
 :::{pull-quote}
 NixOS does not implement the <wiki:Filesystem_Hierarchy_Standard> or use dynamic linking.
@@ -51,8 +51,10 @@ A process diagram of the dynamic linker's search path on Linux, from <https://ci
 :::
 
 Nix packages, such as the Python package taken from `nixpkgs`, have a hard-coded `RPATH` pointing to the pre-computed library directories for this package:
+
 ```{code} text
 :emphasize-lines: 10
+:label: readelf-python
 :linenos:
 # Get Python and readelf
 ❯ nix shell nixpkgs#python314 nixpkgs#bintools
@@ -96,10 +98,11 @@ Dynamic section at offset 0x2d68 contains 33 entries:
  0x000000006fffffff (VERNEEDNUM)         1
  0x000000006ffffff0 (VERSYM)             0x7ae
  0x000000006ffffff9 (RELACOUNT)          3
- 0x0000000000000000 (NULL)               0x0 
- ```
+ 0x0000000000000000 (NULL)               0x0
+```
 
 The Python binary from nixpkgs is linked properly. But, if we use `pip` to install a package, we will quickly encounter a linking problem:
+
 ```{code} text
 :emphasize-lines: 10
 :linenos:
@@ -127,7 +130,7 @@ Traceback (most recent call last):
     )
   File "/tmp/tmp.8UZkLANZSC/.venv/lib/python3.14/site-packages/numpy/_core/__init__.py", line 85, in <module>
     raise ImportError(msg) from exc
-ImportError: 
+ImportError:
 
 IMPORTANT: PLEASE READ THIS FOR ADVICE ON HOW TO SOLVE THIS ISSUE!
 
@@ -155,10 +158,11 @@ Original error was: libstdc++.so.6: cannot open shared object file: No such file
 ```
 
 The problem is that the linker used by the Python binary is unable to locate the shared libraries required by the NumPy wheel and the `manylinux` specification:
+
 ```{code} text
 :emphasize-lines: 4, 12
 :linenos:
-❯ ldd .venv/lib/python3.14/site-packages/numpy/_core/_multiarray_umath.cpython-314-x86_64-linux-gnu.so 
+❯ ldd .venv/lib/python3.14/site-packages/numpy/_core/_multiarray_umath.cpython-314-x86_64-linux-gnu.so
     linux-vdso.so.1 (0x00007f7bede7a000)
     libscipy_openblas64_-096271d3.so => /tmp/tmp.8UZkLANZSC/.venv/lib/python3.14/site-packages/numpy/_core/../../numpy.libs/libscipy_openblas64_-096271d3.so (0x00007f7bebc00000)
     libstdc++.so.6 => not found
@@ -172,10 +176,33 @@ The problem is that the linker used by the Python binary is unable to locate the
     libz.so.1 => not found
 ```
 
-:::{note} To Do
+(sec:how-resolved)=
 
-- `LD_LIBRARY_PATH`
-- `patchelf`
-- packages shipping binaries
-- Flakes showing this
-  :::
+## How shared libraries are resolved
+
+The `ld` dynamic linker follows [a strict process](https://man7.org/linux/man-pages/man8/ld.so.8.html#DESCRIPTION) for resolving dynamic libraries required by a program. Many programs set `DT_RPATH` or `DT_RUNPATH` dynamic attributes. These specify paths to directories containing shared libraries, and may include special tokens like `$ORIGIN` that define these paths relative to the library itself. The semantics of `DT_RUNPATH` and `DT_RPATH` are described in the `ld` manual page. These paths are used to resolve binaries in the `NEEDED` section of the library, e.g. those in @readelf-python. Importantly, there three important lookup paths for shared libraries:
+
+1. The binary's `DT_RPATH` attribute (if the `DT_RUNPATH` attribute does not exist).
+1. The path indicated by the `LD_LIBRARY_PATH` environment variable.
+1. The binary's `DT_RUNPATH` attribute.
+
+It follows that the system can modify which shared libraries are resolved by setting `LD_LIBRARY_PATH`, but only for binaries that either don't define `DT_RPATH` or for which the `DT_RPATH` location does not yield a matching library.
+
+This is all very useful information, but it doesn't explain why we can't easily "fix" NixOS Python binaries to support wheels. Why can't we just set `DT_RPATH` / `DT_RUNPATH` on the Python binary to include paths to the required manylinux shared libraries? Well, there's a nuance. Whilst these paths are searched when linking `NEEDED` dependencies of the Python binary, `DT_RUNPATH` is not respected when resolving child dependencies (dependencies of NEEDED binaries). But, this is still not the reason. Rather, Python loads compiled modules like `numpy` using `dlopen`, which has [its own rules](https://www.man7.org/linux/man-pages/man3/dlopen.3.html#DESCRIPTION) for shared library resolution. As such, setting `LD_LIBRARY_PATH` is the only mechanism for fixing dynamically loaded Python libraries in a non-invasive (with respect to these libraries) manner.
+
+:::{warning}
+:label: prob:ld-lib-scope
+However, changing `LD_LIBRARY_PATH` is a sledgehammer. It will easily break binaries that are expecting, for example, a particular version of libc or other binaries. There's no way to scope it to a single binary unless you shim the binary in question.
+:::
+
+## Changing the linker
+
+An assumption in @sec:how-resolved is that we're using the standard dynamic linker `ld`. But, this is only an assumption. [`nix-ld`](https://github.com/nix-community/nix-ld) is a shim that enables system users to configure alternative dynamic library paths. It is designed to drop-in in place of the standard linker. This is where we can get clever:
+
+- `nix-ld` lets us define a custom `NIX_LD_LIBRARY_PATH` that's set _only_ for the dynamic linker. This fixes @ld-lib-scope.
+- We can path the `python` binary to use this linker, and shim the patched binary so that it sets `NIX_LD_LIBRARY_PATH`. This is what I've done in [my Python flake](https://github.com/agoose77/dev-flakes/blob/45e941722640b75cb55af326151c8a9af52f598b/python/venv-shell-hook.sh#L13-L33).
+
+## Future work
+In future, I think we can probably dispense with `nix-ld`. It's a bit of a sledgehammer for what we actually want to do. I suspect we can build a Nix derivation of `glibc` that either replaces the lookup of `LD_LIBRARY_PATH` with our own variable, or just hard-codes the lookup paths directly.
+
+This blog post wasn't up to my normal standard, but I am aware that sometimes a bad blog post is better than no blog post!
