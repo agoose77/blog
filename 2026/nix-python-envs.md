@@ -202,4 +202,6 @@ An assumption in @sec:how-resolved is that we're using the standard dynamic link
 ## Future work
 In future, I think we can probably dispense with `nix-ld`. It's a bit of a sledgehammer for what we actually want to do. I suspect we can build a Nix derivation of `glibc` that either replaces the lookup of `LD_LIBRARY_PATH` with our own variable, or just hard-codes the lookup paths directly.
 
+:::{note}
 This blog post wasn't up to my normal standard, but I am aware that sometimes a bad blog post is better than no blog post!
+:::
