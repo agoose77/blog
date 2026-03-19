@@ -197,10 +197,7 @@ However, changing `LD_LIBRARY_PATH` is a sledgehammer. It will easily break bina
 
 ## Changing the linker
 
-An assumption in @sec:how-resolved is that we're using the standard dynamic linker `ld`. But, this is only an assumption. [`nix-ld`](https://github.com/nix-community/nix-ld) is a shim that enables system users to configure alternative dynamic library paths. It is designed to drop-in in place of the standard linker. This is where we can get clever:
-
-- `nix-ld` lets us define a custom `NIX_LD_LIBRARY_PATH` that's set _only_ for the dynamic linker. This fixes @ld-lib-scope.
-- We can path the `python` binary to use this linker, and shim the patched binary so that it sets `NIX_LD_LIBRARY_PATH`. This is what I've done in [my Python flake](https://github.com/agoose77/dev-flakes/blob/45e941722640b75cb55af326151c8a9af52f598b/python/venv-shell-hook.sh#L13-L33).
+An assumption in @sec:how-resolved is that we're using the standard dynamic linker `ld`. But, this is only an assumption. [`nix-ld`](https://github.com/nix-community/nix-ld) is a shim that enables system users to configure alternative dynamic library paths. It is designed to drop-in in place of the standard linker. This is where we can get clever. `nix-ld` lets us define a custom `NIX_LD_LIBRARY_PATH` that's set _only_ for the dynamic linker, resolving the problem outlined in @prob:ld-lib-scope. We can patch the `python` binary to use this linker, and shim the patched binary so that it sets `NIX_LD_LIBRARY_PATH`. This is what I've done in [my Python flake](https://github.com/agoose77/dev-flakes/blob/45e941722640b75cb55af326151c8a9af52f598b/python/venv-shell-hook.sh#L13-L33), which is [exposed via my `dev-flakes` as a package](https://github.com/agoose77/dev-flakes/blob/828aa4faa8ab65570313991f9db95a3d7f09833e/python/flake.nix#L18) that can be added to a `devShell` (as [in my dev flake](https://github.com/agoose77/dev-flakes/blob/828aa4faa8ab65570313991f9db95a3d7f09833e/python/flake.nix#L38)).
 
 ## Future work
 In future, I think we can probably dispense with `nix-ld`. It's a bit of a sledgehammer for what we actually want to do. I suspect we can build a Nix derivation of `glibc` that either replaces the lookup of `LD_LIBRARY_PATH` with our own variable, or just hard-codes the lookup paths directly.
