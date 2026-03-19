@@ -36,7 +36,7 @@ From analysing packages distributed in the Anaconda and Canopy distributions, a 
 
 ## Python on NixOS
 
-As mentioned above, `manylinux` makes it possible to run Python wheels on many kinds of Linux distributions. It effectively defines a runtime environment specification. NixOS distributions typically do not implement such a specification. Specifically, NixOS does not implement the <wiki:Filesystem*Hierarchy_Standard> or use dynamic linking. This means that a naive binary will not be able to locate \_any* shared libraries. Nix package builds typically set the `rpath` of built libraries so that they can locate their dependencies explicitly.
+As mentioned above, `manylinux` makes it possible to run Python wheels on many kinds of Linux distributions. It effectively defines a runtime environment specification. NixOS distributions typically do not implement such a specification. Specifically, NixOS does not implement the <wiki:Filesystem*Hierarchy_Standard> or use dynamic linking. This means that a naive binary will not be able to locate _any_ shared libraries. Nix package builds typically set the `rpath` of built libraries so that they can locate their dependencies explicitly.
 
 :::{pull-quote}
 NixOS does not implement the <wiki:Filesystem_Hierarchy_Standard> or use dynamic linking.
