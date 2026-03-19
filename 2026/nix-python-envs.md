@@ -53,7 +53,7 @@ A process diagram of the dynamic linker's search path on Linux, from <https://ci
 Nix packages, such as the Python package taken from `nixpkgs`, have a hard-coded `RPATH` pointing to the pre-computed library directories for this package:
 
 ```{code} text
-:emphasize-lines: 10
+:emphasize-lines: 16
 :label: readelf-python
 :linenos:
 # Get Python and readelf
