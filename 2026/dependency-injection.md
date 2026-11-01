@@ -15,7 +15,9 @@ Consumer
 : A unit of code that uses an API provided by another {term}`service`.
 :::
 
-For example, imagine that you're writing an analysis script that uses a plotting tool. You could start with a simple function:
+For example, imagine that you're writing an analysis script that uses a plotting tool. You could start with a simple function that creates a figure, performs some plotting, and writes the result to disk[^srp]:
+
+[^srp]: My preferred programming mantra is "push IO to the leaves". Performing a disk write inside of a function renders it impure. This makes it harder to test, non-idempotent, and harder to transform between sync and async designs. See [Sans I/O](https://sans-io.readthedocs.io/index.html) design for more details.
 
 ```python
 from matplotlib import pyplot as plt
@@ -28,7 +30,7 @@ def plot_something():
 plot_something()
 ```
 
-Down the road, you might want to support a different plotting tool like `plotly`. What is the cleanest way to do this? The obvious approach would be to introduce a `IPlotter` interface, and pass in the plotter as an argument to the plotting function:
+Down the road, you might want to support a different plotting library like `plotly`. What is the cleanest way to do this? The obvious approach would be to introduce a `IPlotter` interface, and pass in the plotter as an argument to the plotting function:
 
 ```python
 from typing import Protocol
