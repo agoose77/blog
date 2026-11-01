@@ -183,7 +183,8 @@ The easiest way to handle this complexity with imperative programs is to keep th
 
 A dependency injector can help to eliminate this complexity by separating dependency wiring from call stacks. Imagine we have a dependency injector that understands function signatures, and wires up each needed {term}`service` to its dependent {term}`consumers<consumer>`. In Python, this might look something like:
 
-```python
+```{code} python
+:label: code:pseudo-di
 @injector.service
 def analyse_first(plotter: Plotter):
     plot_something(plotter)
@@ -215,3 +216,18 @@ def provide_plotly_plotter() -> Plotter:
     return PlotlyPlotter()
 
 ```
+
+Functionally, a dependency injector that integrates many-to-one services can be implemented as a graph:
+
+```{mermaid}
+graph TD;
+
+provide_image_converter --> provide_plotter
+provide_plotter --> analyse_first
+provide_plotter --> analyse_second
+analyse_first -.-> main
+analyse_second -.-> main
+
+```
+
+In order to wire up all of the services, a <wiki:topological_sort> can be used to produce a sequence of services that must be registered in order to satisfy all requirements. In [the above pseudo-code](#code:pseudo-di), this is performed by the `create_and_register_services` method.
