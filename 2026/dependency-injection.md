@@ -208,15 +208,6 @@ main()
 
 ```
 
-This code is flat; {term}`services<service>` are provided directly to {term}`consumers<consumer>` such that we do not need to pass them down multiple call frames. Because services are constructed as many-to-one components, it's trivial to replace one implementation with another. For example, if we wanted to swap out the matplotlib plotter with a higher ranked plotter, it's as simple as:
-
-```python
-@injector.service(rank=100)
-def provide_plotly_plotter() -> Plotter:
-    return PlotlyPlotter()
-
-```
-
 Functionally, a dependency injector that integrates many-to-one services can be implemented as a graph:
 
 ```{mermaid}
@@ -231,3 +222,15 @@ analyse_second -.-> main
 ```
 
 In order to wire up all of the services, a <wiki:topological_sort> can be used to produce a sequence of services that must be registered in order to satisfy all requirements. In [the above pseudo-code](#code:pseudo-di), this is performed by the `create_and_register_services` method.
+
+What has this abstraction given us? Well, the graph has been flattened; {term}`services<service>` are provided directly to {term}`consumers<consumer>` such that we do not need to pass them down multiple call frames. 
+
+We've also now gained a straightforward way to *swap out* components. If your application supports user-provided plugins, e.g. as [`project.entry-points`](https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/#using-package-metadata), it is possible to add new new edges (and vertices) to our graph. For example, if we wanted to swap out the matplotlib plotter with a higher ranked plotter, it's as simple as:
+
+```python
+@injector.service(rank=100)
+def provide_plotly_plotter() -> Plotter:
+    return PlotlyPlotter()
+
+```
+
